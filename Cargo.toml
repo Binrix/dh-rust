@@ -1,0 +1,9 @@
+[package]
+name = "dh"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0.214"
+serde_json = "1.0.48"
+serde_json_path = "0.7.1"
