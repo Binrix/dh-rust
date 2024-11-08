@@ -1,6 +1,5 @@
-use std::{borrow::BorrowMut, fs::File, io::{BufRead, BufReader}, usize};
-
-use serde_json_path::JsonPath;
+use std::{fs::File, io::{BufRead, BufReader, BufWriter, Write}};
+use serde_json::Value;
 
 // #[derive(Default)]
 // pub struct PipelineContext<'a> {
@@ -17,76 +16,66 @@ use serde_json_path::JsonPath;
 //     }
 // }
 
-fn event_is_sensitive(json: &serde_json::Value) -> bool {
-    match json["sensitive"].as_bool() {
-        Some(is_sensitive) => is_sensitive,
-        None => return false
+fn is_event_sensitive(json: &serde_json::Value) -> bool {
+    json.get("sensitive")
+        .and_then(|sensitive: &Value| sensitive.as_bool())
+        .unwrap_or(false)
+}
+
+fn anonymize_property(json: &mut serde_json::Value, path: &str) -> bool {
+    let keys: Vec<&str> = path.split(".").skip(1).collect();
+    let mut current_json: &mut Value = json;
+
+    for (index, key) in keys.iter().enumerate() {
+        if index == keys.len() - 1 {
+            if let Some(obj) = current_json.as_object_mut() {
+                obj.insert(key.to_string(), Value::String("Anonymize".to_string()));
+                return true;
+            } 
+        } else {
+            current_json = match current_json.get_mut(*key) {
+                Some(value) => value,
+                None => return false
+            }
+        }
     }
+
+    return false;
 }
 
 /// Reads the content of a file line by line. Replaces sensitive data.
 fn read(file_name: &str) -> std::io::Result<()> {
     let reader = BufReader::new(File::open(file_name)?);
+    let mut writer = BufWriter::new(File::create("anonymized.json".to_string())?);
 
-    for line_string in reader.lines() {
-        match line_string {
-            Ok(line) => {
-                let json: serde_json::Value = serde_json::from_str(&line).expect("Parsing was not possible");
+    reader.lines()
+        .filter_map(Result::ok)
+        .filter_map(|line: String| serde_json::from_str::<Value>(&line).ok())
+        .for_each(|mut json: Value| {
+            if is_event_sensitive(&json) {
+                let paths_cloned: Vec<String> = json
+                    .get("paths")
+                    .and_then(|v: &Value| v.as_array())
+                    .map(|paths: &Vec<Value>| {
+                        paths
+                            .iter()
+                            .filter_map(|path: &Value| path.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
 
-                if event_is_sensitive(&json) {
-                    let paths = json["paths"].as_array().unwrap();
-
-                    for (_, path) in paths.iter().enumerate() {
-                        let json_path = JsonPath::parse(&path.to_string()).unwrap();
-
-                        let val = json_path.query(&json).borrow_mut().exactly_one();
-                        // val.get_mut().unwrap() = "Anonymized";
+                for path in paths_cloned {
+                    if anonymize_property(&mut json, &path) {
+                        println!("Property {} was updated", &path);
                     }
-
                 }
+                println!("{}", json);
+            }
+            let _ = writeln!(writer, "{}", &json);
+        });
 
-                // let path = JsonPath::parse("$.data.userId").unwrap(); 
-                
-
-                // let val_of_prop = path.query(&json).exactly_one().unwrap();
-
-                // println!("{}", sensitive);
-            },
-            Err(e) => panic!("Error reading the line {}", e)
-        }
-
-        // let line = line.expect("Could not get line");
-
-        // let mut iter = lin
-
-        // let start_index = match line.find("userId").map(|i| i + "userId".len() + 1) {
-        //     Some(index) => index,
-        //     None => return Ok(())
-        // };
-
-        // if start_index != 0 {
-        //     let end_index = &line[start_index..];
-
-
-        //     // let word = line.get(start_index..end_index).unwrap();
-        //     println!("{}", end_index)
-        // }
-
-        // if start_index != None {
-        //     // line.replace_range(range, replace_with);
-        //     let end_index = line[start_index..];
-
-        // }
-
-        // let new_line = line.replace("userId", "anonymized");
-
-        // println!("line: {}, start index for property: {}", line, start_index);
-        // println!("value: {}", line.chars().nth(start_index).unwrap());
-    }
-
-    Ok(())
+    return Ok(())
 }
-
 
 pub fn main() {
     let _ = read("example.json");    
