@@ -1,4 +1,4 @@
-{"sensitive": true, "data": {"userId": "sensitive data!!!", "password": "oh oh..."}}
-{"data": {"userId": "sensitive data!!!", "password": "oh oh..."}}
-{"data": {"userId": "sensitive data!!!", "password": "oh oh..."}}
-{"data": {"userId": "sensitive data!!!", "password": "oh oh..."}}
+{"sensitive": true, "paths": ["$.data.userId", "$.data.password"], "data": {"userId": "kleinb", "password": "oh oh..."}}
+{"data": {"userId": "olaf22", "password": "oh oh..."}}
+{"sensitive": true, "paths": ["$.data.password"], "data": {"userId": "berbelM", "password": "oh oh..."}}
+{"data": {"userId": "AlfredA", "password": "oh oh..."}}

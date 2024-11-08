@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufRead, BufReader}, usize};
+use std::{borrow::BorrowMut, fs::File, io::{BufRead, BufReader}, usize};
 
 use serde_json_path::JsonPath;
 
@@ -17,6 +17,13 @@ use serde_json_path::JsonPath;
 //     }
 // }
 
+fn event_is_sensitive(json: &serde_json::Value) -> bool {
+    match json["sensitive"].as_bool() {
+        Some(is_sensitive) => is_sensitive,
+        None => return false
+    }
+}
+
 /// Reads the content of a file line by line. Replaces sensitive data.
 fn read(file_name: &str) -> std::io::Result<()> {
     let reader = BufReader::new(File::open(file_name)?);
@@ -25,12 +32,25 @@ fn read(file_name: &str) -> std::io::Result<()> {
         match line_string {
             Ok(line) => {
                 let json: serde_json::Value = serde_json::from_str(&line).expect("Parsing was not possible");
-                let path = JsonPath::parse("$.data.userId").unwrap(); 
+
+                if event_is_sensitive(&json) {
+                    let paths = json["paths"].as_array().unwrap();
+
+                    for (_, path) in paths.iter().enumerate() {
+                        let json_path = JsonPath::parse(&path.to_string()).unwrap();
+
+                        let val = json_path.query(&json).borrow_mut().exactly_one();
+                        // val.get_mut().unwrap() = "Anonymized";
+                    }
+
+                }
+
+                // let path = JsonPath::parse("$.data.userId").unwrap(); 
                 
 
-                let val_of_prop = path.query(&json).exactly_one().unwrap();
+                // let val_of_prop = path.query(&json).exactly_one().unwrap();
 
-                println!("{}", val_of_prop);
+                // println!("{}", sensitive);
             },
             Err(e) => panic!("Error reading the line {}", e)
         }
