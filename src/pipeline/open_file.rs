@@ -1,3 +1,10 @@
+use std::{fs::File, io::BufReader};
+
+use super::base::{
+    pipeline::{into_next, Pipeline}, 
+    pipeline_context::PipelineContext
+};
+
 #[derive(Default)]
 pub struct OpenFile {
     next: Option<Box<dyn Pipeline>>

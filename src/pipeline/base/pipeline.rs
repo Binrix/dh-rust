@@ -1,3 +1,5 @@
+use super::pipeline_context::PipelineContext;
+
 pub trait Pipeline {
     fn execute(&mut self, context: &mut PipelineContext) {
         self.handle(context);

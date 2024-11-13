@@ -1,3 +1,14 @@
+use std::{fs::File, io::{BufRead, BufReader, BufWriter, Write}};
+use serde_json::Value;
+
+use super::{
+    base::{
+        pipeline::{into_next, Pipeline}, 
+        pipeline_context::PipelineContext
+    }, 
+    helper::helper::{anonymize_property, is_event_sensitive}
+};
+
 #[derive(Default)]
 pub struct Anonymize {
     next: Option<Box<dyn Pipeline>>,
