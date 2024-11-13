@@ -22,7 +22,6 @@ impl Anonymize {
     }
     fn read(&mut self, reader: &mut BufReader<File>) {
         let mut writer = BufWriter::new(File::create("anonymized.json").unwrap());
-        // let reader = &context.file_reader; 
 
         reader.lines()
             .filter_map(Result::ok)

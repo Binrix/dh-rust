@@ -1,8 +1,0 @@
-[package]
-name = "dh"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-serde = "1.0.214"
-serde_json = { version = "1.0.48", features = ["preserve_order"]}
