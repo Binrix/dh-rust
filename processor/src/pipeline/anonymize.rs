@@ -1,5 +1,5 @@
-use std::{fs::File, io::{BufRead, BufReader, BufWriter, Write}};
-use serde_json::Value;
+use std::{fs::File, io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write}};
+use serde_json::{to_vec, to_writer, Value};
 
 use super::{
     base::{
@@ -21,7 +21,7 @@ impl Anonymize {
         }
     }
     fn read(&mut self, reader: &mut BufReader<File>) {
-        let mut writer = BufWriter::new(File::create("anonymized.json").unwrap());
+        let mut writer = BufWriter::new(File::create("./files_to_process/anonymized.json").unwrap());
 
         reader.lines()
             .filter_map(Result::ok)
@@ -46,13 +46,13 @@ impl Anonymize {
                     }
                 }
                 let _ = writeln!(writer, "{}", &json);
-            });
+        });
     }
 }
 
 impl Pipeline for Anonymize {
     fn handle(&mut self, context: &mut PipelineContext) {
-        println!("work on anonymization");
+        println!("Anonymize content...");
         if let Some(ref mut reader) = context.buffer {
             self.read(reader);
         }

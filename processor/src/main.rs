@@ -1,14 +1,23 @@
 use std::{error::Error, time::Duration};
 
-use dh::pipeline::{
-    base::{
+use processor::pipeline::{
+    anonymize::Anonymize, base::{
         pipeline::Pipeline, 
         pipeline_context::PipelineContext
-    }, 
-    anonymize::Anonymize, 
-    open_file::OpenFile
+    }, open_file::OpenFile, publisher::Publisher
 };
-use iggy::{client::{Client, MessageClient, UserClient}, clients::client::IggyClient, consumer::Consumer, messages::{poll_messages::PollingStrategy, send_messages::Message}, models::messages::PolledMessage, users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME}};
+use iggy::{
+    client::{
+        Client, MessageClient, UserClient
+    }, 
+    clients::client::IggyClient, 
+    consumer::Consumer, 
+    messages::poll_messages::PollingStrategy, 
+    models::messages::PolledMessage, 
+    users::defaults::{
+        DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME
+    }
+};
 use tokio::time::sleep;
 use tracing::info;
 
@@ -28,14 +37,8 @@ async fn main() {
 }
 
 async fn consume_messages(client: &IggyClient) {
-    let interval = Duration::from_millis(500);
-    info!(
-        "Messages will be consumed from stream: {}, topic: {}, partition: {} with interval {} ms.",
-        STREAM_ID,
-        TOPIC_ID,
-        PARTITION_ID,
-        interval.as_millis()
-    );
+    let interval = Duration::from_millis(5000);
+    info!("Processor starts listening");
 
     let mut offset = 0;
     let messages_per_batch = 10;
@@ -56,7 +59,7 @@ async fn consume_messages(client: &IggyClient) {
             .await.unwrap();
 
         if polled_messages.messages.is_empty() {
-            info!("No messages found.");
+            info!("No files for processing detected.");
             sleep(interval).await;
             continue;
         }
@@ -71,11 +74,20 @@ async fn consume_messages(client: &IggyClient) {
 }
 
 fn handle_message(message: &PolledMessage) -> Result<(), Box<dyn Error>> {
-    // The payload can be of any type as it is a raw byte array. In this case it's a simple string.
     let payload = std::str::from_utf8(&message.payload)?;
-    info!(
-        "Handling message at offset: {}, payload: {}...",
-        message.offset, payload
-    );
+    info!("File for processing detected: {}", payload);
+
+    let publisher_pipe = Publisher::default();
+    let anonymize_pipe = Anonymize::new(publisher_pipe);
+    let mut open_file_pipe = OpenFile::new(anonymize_pipe);
+
+    let mut pipeline_context: PipelineContext<'_> = PipelineContext {
+        pipeline_name: "Default".into(),
+        file_path: payload.into(),
+        ..PipelineContext::default()
+    };
+
+    open_file_pipe.execute(&mut pipeline_context);
+
     Ok(())
 }

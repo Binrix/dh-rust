@@ -20,8 +20,8 @@ impl OpenFile {
 
 impl Pipeline for OpenFile {
     fn handle(&mut self, context: &mut PipelineContext) {
-        println!("Try opening file: {}", context.file_name);
-        match File::open(context.file_name) {
+        println!("Open file: {}", context.file_path);
+        match File::open(context.file_path) {
             Ok(stream) => {
                 context.buffer = Some(BufReader::new(stream));
             },

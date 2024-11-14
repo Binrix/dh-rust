@@ -8,12 +8,6 @@ services:
       - iggy
     ports:
       - "8090:8090"
-    volumes:
-      - server:/local_data
-
-volumes:
-  server:
-    driver: local
 
 networks:
   iggy:

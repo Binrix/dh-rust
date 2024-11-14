@@ -1,10 +1,10 @@
-use std::{borrow::Borrow, error::Error, ffi::{OsStr, OsString}, fs, str::FromStr, time::Duration};
+use std::{error::Error, ffi::OsString, fs::{self, DirEntry}, io, str::FromStr};
 
 use iggy::{
-    client::{Client, MessageClient, StreamClient, TopicClient, UserClient}, clients::client::IggyClient, compression::compression_algorithm::CompressionAlgorithm, messages::send_messages::{Message, Partitioning}, users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME}, utils::expiry::IggyExpiry
+    client::{Client, MessageClient, StreamClient, TopicClient, UserClient}, 
+    clients::client::IggyClient, compression::compression_algorithm::CompressionAlgorithm, messages::send_messages::{Message, Partitioning}, users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME}, utils::expiry::IggyExpiry
 };
-use tokio::{time::sleep};
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -14,63 +14,52 @@ const PARTITION_ID: u32 = 1;
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
 
-    // let client = IggyClient::default();
+    let mut word = String::new();
+    let client = IggyClient::default();
     
-    // client.connect().await?;
-    // client
-    //     .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
-    //     .await?;
+    client.connect().await?;
+    client
+        .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
+        .await?;
 
-    // init_system(&client).await;
+    init_system(&client).await;
 
-    // produce_message(&client).await;
+    loop {
+        println!("Type something a single character to scan the directory");
 
-    scan_dir("./files_to_process").await;
+        io::stdin()
+            .read_line(&mut word)
+            .expect("Failed to read line");
+
+        word = word.trim().to_string();
+
+        if word.len() != 1 { break; }
+
+        for new_file in scan_dir("./files_to_process") {
+            send_file_for_processing_detected(&client, new_file.to_str().unwrap()).await;
+        }
+
+        word.clear();
+    }
 
     Ok(())
 }
 
-async fn scan_dir(path: &str) {
+/// Scans the directory. 
+/// 
+/// All scanned files will be added to a list. It will skip the files contained in the list.
+/// # Arguments
+/// * `path` - The path to the directory.
+fn scan_dir(path: &str) -> impl Iterator<Item = OsString> {
     info!("Scanning directory {path}");
 
-    let interval = Duration::from_millis(5000);
-    let mut detected_files = Vec::<OsString>::new(); 
-
-    loop {
-        let paths = fs::read_dir(path).unwrap();
-
-        let new_files: Vec::<OsString> = paths
-            .filter_map(|path| Some(path.unwrap().file_name().to_os_string()))
-            .filter(|path| !detected_files.contains(path))
-            .collect();
-
-        for file in new_files {
-            info!("File {:?} for processing detected", file);
-            detected_files.push(file);
-        }
-
-        // paths
-        //     .filter_map(|path| Some(path.unwrap().file_name().to_os_string()))
-        //     .filter(|path| !detected_files.contains(&path))
-        //     .for_each(|path| {
-        //         info!("File {:?} for processing detected.", path);
-        //         detected_files.push(path.clone());
-        //         detected_files.push(path.to_os_string());
-        //     });
-
-        // for path in paths {
-        //     let file_name = path.unwrap().file_name();
-
-        //     info!("File {:?} was found.", file_name);
-        //     detected_files.push(file_name);
-        // }
-
-        // info!("test");
-
-        let length = detected_files.len();
-        info!("Number of detected files: {}", length);
-
-        sleep(interval).await;
+    match fs::read_dir(path) {
+        Ok(paths) => paths
+            .filter_map(|path| Some(path.unwrap().path().into_os_string())),
+        Err(e) => { 
+            error!("Unable to read directory: {path}, with the following error: {}", &e);
+            panic!()
+        },
     }
 }
 
@@ -98,27 +87,15 @@ async fn init_system(client: &IggyClient) {
 
 }
 
+/// Sends a FileForProcessingDetected message.
+/// # Arguments
+/// * `client` - The client for sending the message.
+/// * `path_to_file` - The path for the file which was detected
 async fn send_file_for_processing_detected(client: &IggyClient, path_to_file: &str) {
-    let interval = Duration::from_millis(2000);
-
-    info!("Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.", STREAM_ID, TOPIC_ID, PARTITION_ID, interval.as_millis());
-
-    let mut current_id = 0;
-    let messages_per_batch = 3;
     let partitioning = Partitioning::partition_id(PARTITION_ID);
 
-    // loop {
-    //     let mut messages = Vec::new();
+    let message = Message::from_str(path_to_file).unwrap();
 
-    //     for _ in 0..messages_per_batch {
-    //         current_id += 1;
-    //         let payload = format!("message-{current_id}");
-    //         let message = Message::from_str(&payload).unwrap();
-    //         messages.push(message);
-    //     }
-    //     client.send_messages(&STREAM_ID.try_into().unwrap(), &TOPIC_ID.try_into().unwrap(), &partitioning, &mut messages).await.unwrap();
-    //     info!("Sent {messages_per_batch} message(s).");
-    //     sleep(interval).await;
-    // }
-
+    client.send_messages(&STREAM_ID.try_into().unwrap(), &TOPIC_ID.try_into().unwrap(), &partitioning, &mut [message]).await.unwrap();
+    info!("Sent FileForProcessingDetected message.");
 }
