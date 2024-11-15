@@ -1,6 +1,7 @@
-use std::fs::rename;
+use std::{fs::rename, path::PathBuf};
 
 use tracing::{error, info};
+use uuid::Uuid;
 
 use super::base::{
     pipeline::{into_next, Pipeline}, 
@@ -19,8 +20,11 @@ impl Publisher {
         }
     }
 
-    fn publish(&mut self, file_path: &str) {
-        match rename(file_path, "./publish/published_anonymized.json") {
+    fn publish(&mut self, file_path: &mut PathBuf, publish_folder: &mut PathBuf, uuid: &Uuid) {
+        publish_folder.push(format!("{uuid}.json"));
+        file_path.set_file_name(format!("{uuid}.json"));
+
+        match rename(file_path, publish_folder) {
             Ok(_) => info!("File was published"),
             Err(e) => error!("File was not published: {}", e)
         };
@@ -29,7 +33,10 @@ impl Publisher {
 
 impl Pipeline for Publisher {
     fn handle(&mut self, context: &mut PipelineContext) {
-        self.publish("./file_to_process/anonymized.json");
+        if let (Some(file_path), Some(uuid), Some(publish_folder)) = (&mut context.file_path, &mut context.uuid, &mut context.publish_folder) {
+            self.publish(file_path, publish_folder, uuid);
+        }
+
     }
 
     fn next(&mut self) -> &mut Option<Box<dyn Pipeline>> {

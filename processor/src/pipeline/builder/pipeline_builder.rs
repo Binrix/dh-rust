@@ -1,3 +1,7 @@
+use std::path::PathBuf;
+
+use uuid::Uuid;
+
 use crate::pipeline::{
     anonymize::Anonymize, base::{pipeline::Pipeline, pipeline_context::PipelineContext}, open_file::OpenFile, publisher::Publisher
 };
@@ -16,9 +20,11 @@ impl<'a> ProcessorBuilder<'a> {
 
         let pipeline_context: PipelineContext<'a> = PipelineContext {
             pipeline_name: "Default",
-            file_path: file_path,
+            file_path: Some(PathBuf::from(file_path)),
+            uuid: Some(Uuid::new_v4()),
             file_name: file_name,
-            publish_folder: "./publish/",
+            // file_name_after_processing: "anonymized.json",
+            publish_folder: Some(PathBuf::from("./publish/")),
             ..PipelineContext::default()
         };
 
