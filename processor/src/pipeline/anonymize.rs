@@ -72,7 +72,7 @@ impl Pipeline for Anonymize {
     fn handle(&mut self, context: &mut PipelineContext) {
         println!("Anonymize content...");
         
-        if let Some(reader) = (&mut context.buffer) {
+        if let Some(reader) = &mut context.buffer {
             self.read(reader, &mut context.file_path, &mut context.uuid);
         }
     }
