@@ -1,12 +1,22 @@
-use std::{fs::File, io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write}};
-use serde_json::{to_vec, to_writer, Value};
+use serde_json::Value;
 
+use std::{
+    fs::File, 
+    io::{
+        BufRead, BufReader, BufWriter, Write
+    }, 
+    path::PathBuf
+};
 use super::{
     base::{
-        pipeline::{into_next, Pipeline}, 
+        pipeline::{
+            into_next, Pipeline
+        }, 
         pipeline_context::PipelineContext
     }, 
-    helper::helper::{anonymize_property, is_event_sensitive}
+    helper::helper::{
+        anonymize_property, is_event_sensitive
+    }
 };
 
 #[derive(Default)]
@@ -20,8 +30,11 @@ impl Anonymize {
             next: into_next(next),
         }
     }
-    fn read(&mut self, reader: &mut BufReader<File>) {
-        let mut writer = BufWriter::new(File::create("./files_to_process/anonymized.json").unwrap());
+    fn read(&mut self, reader: &mut BufReader<File>, file_path: &str) {
+        let mut path = PathBuf::from(file_path);
+        path.set_file_name("anonymized.json");
+
+        let mut writer = BufWriter::new(File::create(path).unwrap());
 
         reader.lines()
             .filter_map(Result::ok)
@@ -54,7 +67,7 @@ impl Pipeline for Anonymize {
     fn handle(&mut self, context: &mut PipelineContext) {
         println!("Anonymize content...");
         if let Some(ref mut reader) = context.buffer {
-            self.read(reader);
+            self.read(reader, context.file_path);
         }
     }
 
