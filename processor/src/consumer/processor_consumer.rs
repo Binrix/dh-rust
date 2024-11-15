@@ -22,7 +22,6 @@ use iggy::{
     }
 };
 
-
 pub struct ProcessorConsumer {
     client: IggyClient,
     consumer: Consumer,

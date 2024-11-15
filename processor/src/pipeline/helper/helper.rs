@@ -3,8 +3,7 @@ use serde_json::Value;
 /// Replaces a value by "Anonymize". 
 /// The JSON object contains paths to the property which will be anonymized.
 /// 
-/// # Arguments
-///  
+/// ## Arguments
 /// * `json` - The JSON parsed from the current line
 /// * `path` - The path to the property
 pub fn anonymize_property(json: &mut serde_json::Value, path: &str) -> bool {

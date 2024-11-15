@@ -3,3 +3,4 @@ pub mod anonymize;
 pub mod base;
 pub mod helper;
 pub mod publisher;
+pub mod builder;
