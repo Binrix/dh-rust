@@ -33,10 +33,7 @@ impl Publisher {
 
 impl Pipeline for Publisher {
     fn handle(&mut self, context: &mut PipelineContext) {
-        if let (Some(file_path), Some(uuid), Some(publish_folder)) = (&mut context.file_path, &mut context.uuid, &mut context.publish_folder) {
-            self.publish(file_path, publish_folder, uuid);
-        }
-
+        self.publish(&mut context.file_path, &mut context.publish_folder, &mut context.uuid);
     }
 
     fn next(&mut self) -> &mut Option<Box<dyn Pipeline>> {

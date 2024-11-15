@@ -20,15 +20,13 @@ impl OpenFile {
 
 impl Pipeline for OpenFile {
     fn handle(&mut self, context: &mut PipelineContext) {
-        if let Some(file_path) = &mut context.file_path {
-            println!("Open file: {}", file_path.display());
+        println!("Open file: {}", context.file_path.display());
 
-            match File::open(file_path) {
-                Ok(stream) => {
-                    context.buffer = Some(BufReader::new(stream));
-                },
-                Err(e) => println!("Error reading file {}", e)
-            }
+        match File::open(&mut context.file_path) {
+            Ok(stream) => {
+                context.buffer = Some(BufReader::new(stream));
+            },
+            Err(e) => println!("Error reading file {}", e)
         }
     }
 

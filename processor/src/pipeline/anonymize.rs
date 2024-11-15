@@ -1,6 +1,5 @@
 use serde_json::Value;
 use uuid::Uuid;
-
 use std::{
     fs::File, 
     io::{
@@ -31,7 +30,14 @@ impl Anonymize {
             next: into_next(next),
         }
     }
-    fn read(&mut self, reader: &mut BufReader<File>, file_path: &mut PathBuf, uuid: &mut Uuid) {
+
+    /// Reads the content of the file and anonymizes the properties based on the paths provided in the json.
+    /// Additionally, it saves the content of the file in a new file which is later published.
+    /// ## Arguments
+    /// * `reader` - The reader of the file. Used to read the content line by line.
+    /// * `file_path` - The path where the anonymized content is written to.
+    /// * `uuid` - The uuid used for the new file name.
+    fn read(&self, reader: &mut BufReader<File>, file_path: &mut PathBuf, uuid: &mut Uuid) {
         file_path.set_file_name(format!("{uuid}.json"));
         let mut writer = BufWriter::new(File::create(file_path).unwrap());
 
@@ -66,8 +72,8 @@ impl Pipeline for Anonymize {
     fn handle(&mut self, context: &mut PipelineContext) {
         println!("Anonymize content...");
         
-        if let (Some(reader), Some(file_path), Some(uuid)) = (&mut context.buffer, &mut context.file_path, &mut context.uuid) {
-            self.read(reader, file_path, uuid);
+        if let Some(reader) = (&mut context.buffer) {
+            self.read(reader, &mut context.file_path, &mut context.uuid);
         }
     }
 
